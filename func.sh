@@ -1,6 +1,10 @@
+PS1='$(if [[ -n "$VIRTUAL_ENV" ]]; then echo "%B%F{magenta}(`basename \"$VIRTUAL_ENV\"`) "; fi)%B%F{cyan}%n%B%F{cyan}@%B%F{cyan}%m%b | %B%F{green}%~%F{reset} %b%F{white}%# '
+
+# Created by `pipx` on 2024-05-22 09:43:25
+export PATH="$PATH:/home/kali/.local/bin"
+
 # ======================================================================================================================================================
 # Custom functions & aliases
-
 alias nmap-all="sudo nmap -p- -T5"
 alias nmap-srv="sudo nmap -sC -sV -T5"
 alias nmap-udp="sudo nmap -sU -T5"
@@ -9,6 +13,7 @@ function exenv() {
     deactivate
     unset BOX_NAME
     unset CURRENT_BOX
+    rm -f ~/.opened_env
     if [[ $? == 0 ]]
     then
         echo "Successfully exited env"
@@ -18,14 +23,20 @@ function exenv() {
 }
 
 function nmap_ftcp() {
-    scan_output=$(nmap-all $1)
-    openedports= $(echo $scan_output | grep open | cut -d '/' -f 1 | xargs | tr ' ' ',')
-    echo "nmap-srv $1 -p$openedports -o nmap/$1.nmap"
-    if [ -v "$CURRENT_BOX" ]
+    nmap-all $1 -o "${CURRENT_BOX}/nmap/${BOX_NAME}-all.nmap"
+    openedports=$(cat "${CURRENT_BOX}/nmap/${BOX_NAME}-all.nmap" | grep open | cut -d '/' -f 1 | xargs | tr ' ' ',')
+    if [ ! -z "$CURRENT_BOX" ]
     then
-        nmap-srv $1 -p $(cat nmap/opened-ports.nmap) -o "${CURRENT_BOX}/nmap/${1}.nmap"
+        echo "running nmap-srv $1 -p $openedports -o ${CURRENT_BOX}/nmap/${BOX_NAME}-srv.nmap"
+        nmap-srv $1 -p "$openedports" -o "${CURRENT_BOX}/nmap/${BOX_NAME}-srv.nmap"
     else
-        nmap-srv $1 -p $(cat nmap/opened-ports.nmap) -o "nmap/${1}.nmap"
+        if [ -d "./nmap" ]
+        then
+            echo "Not in env, running nmap-srv $1 -p $openedports -o nmap/${BOX_NAME}-srv.nmap"
+            nmap-srv $1 -p "$openedports" -o "nmap/${BOX_NAME}-srv.nmap"
+        else
+            nmap-srv $1 -p "$openedports" -o "${BOX_NAME}-srv.nmap"
+        fi
     fi
 }
 
@@ -36,10 +47,10 @@ function eenv(){
         python3 -m venv ".$2"
     fi
     source ".$2/bin/activate"
-    ls -al
-    export CURRENT_BOX=$PWD
+    export CURRENT_BOX="$PWD"
     export BOX_NAME="$2"
     echo "Ready to go !"
+    echo "$1 $2" > ~/.opened_env
 }
 
 function cenv(){
@@ -80,3 +91,10 @@ function updatehost() {
     sudo sed -i "s/$current_ip/$1/g" /etc/hosts
     echo "updated /etc/hosts file"
 }
+
+if [[ -f ~/.opened_env ]]
+then
+echo "found opened environement, entering $(cat ~/.opened_env | cut -d " " -f 1) -> $(cat ~/.opened_env | cut -d " " -f 2)"
+eenv $(cat ~/.opened_env)
+echo "run exenv to exit the environment"
+fi
