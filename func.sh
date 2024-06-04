@@ -1,8 +1,3 @@
-PS1='$(if [[ -n "$VIRTUAL_ENV" ]]; then echo "%B%F{magenta}(`basename \"$VIRTUAL_ENV\"`) "; fi)%B%F{cyan}%n%B%F{cyan}@%B%F{cyan}%m%b | %B%F{green}%~%F{reset} %b%F{white}%# '
-
-# Created by `pipx` on 2024-05-22 09:43:25
-export PATH="$PATH:/home/kali/.local/bin"
-
 # ======================================================================================================================================================
 # Custom functions & aliases
 alias nmap-all="sudo nmap -p- -T5"
