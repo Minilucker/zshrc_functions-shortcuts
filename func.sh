@@ -1,5 +1,8 @@
 # ======================================================================================================================================================
 # Custom functions & aliases
+PS1='$(if [[ -n "$VIRTUAL_ENV" ]]; then echo "%B%F{magenta}(`basename \"$VIRTUAL_ENV\"`) "; fi)%B%F{cyan}%n%B%F{cyan}@%B%F{cyan}%m%b | %B%F{green}%~%F{reset} %b%F{white}%# '
+
+
 alias nmap-all="sudo nmap -p- -T5"
 alias nmap-srv="sudo nmap -sC -sV -T5"
 alias nmap-udp="sudo nmap -sU -T5"
@@ -25,13 +28,13 @@ function nmap_ftcp() {
         echo "running nmap-srv $1 -p $openedports -o ${CURRENT_BOX}/nmap/${BOX_NAME}-srv.nmap"
         nmap-srv $1 -p "$openedports" -o "${CURRENT_BOX}/nmap/${BOX_NAME}-srv.nmap"
     else
-        if [ -d "./nmap" ]
-        then
-            echo "Not in env, running nmap-srv $1 -p $openedports -o nmap/${BOX_NAME}-srv.nmap"
+	if [ -d "./nmap" ]
+	then
+	    echo "Not in env, running nmap-srv $1 -p $openedports -o nmap/${BOX_NAME}-srv.nmap"
             nmap-srv $1 -p "$openedports" -o "nmap/${BOX_NAME}-srv.nmap"
-        else
-            nmap-srv $1 -p "$openedports" -o "${BOX_NAME}-srv.nmap"
-        fi
+	else
+	    nmap-srv $1 -p "$openedports" -o "${BOX_NAME}-srv.nmap"
+	fi
     fi
 }
 
@@ -44,7 +47,7 @@ function eenv(){
     source ".$2/bin/activate"
     export CURRENT_BOX="$PWD"
     export BOX_NAME="$2"
-    echo "Ready to go !"
+    export PATH="$PATH:$HOME/Documents/tools"
     echo "$1 $2" > ~/.opened_env
 }
 
@@ -82,14 +85,31 @@ function addhost() {
 
 function updatehost() {
     current_ip=$(grep "/etc/hosts" -e "$2" | cut -d$'\t' -f 1)
-    echo $current
+    if [[ -z $current_ip ]]
+    then
+        read "answer?Host not found, add it ? [Y/n]?"
+        if [ -z "$answer" ]
+        then
+            addhost $1 $2
+        else
+            echo "exiting ..."
+            exit 0
+        fi
+    else
+
     sudo sed -i "s/$current_ip/$1/g" /etc/hosts
     echo "updated /etc/hosts file"
+    fi
+}
+
+function addsub() {
+    sub=$(echo $1 | cut -d '.' -f 1)
+    domain="$(echo $1 | cut -d '.' -f 2).$(echo $1 | cut -d '.' -f 3 )"
+    linen=$(grep -n /etc/hosts -e "$domain" | cut -d ':' -f 1)
+    sudo sed -i "${linen}s/$/ $sub.$domain/" /etc/hosts
 }
 
 if [[ -f ~/.opened_env ]]
 then
-echo "found opened environement, entering $(cat ~/.opened_env | cut -d " " -f 1) -> $(cat ~/.opened_env | cut -d " " -f 2)"
-eenv $(cat ~/.opened_env)
-echo "run exenv to exit the environment"
+    eenv $(cat ~/.opened_env)
 fi
